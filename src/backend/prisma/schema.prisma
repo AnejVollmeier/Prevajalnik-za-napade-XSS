@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  analyses     Analysis[]
+}
+
+model Analysis {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  target      String
+  inputMode   String
+  scoreOverall Int
+  highCount   Int
+  mediumCount Int
+  lowCount    Int
+  reportJson  String   // Shranjujemo kot Stringify JSON
+  
+  @@index([userId])
+}
