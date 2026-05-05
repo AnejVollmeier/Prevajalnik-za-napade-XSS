@@ -1,1 +1,1 @@
-# Prevajalnik-za-napade-XSS
+# XSS Vulnerability Checker
