@@ -17,6 +17,7 @@ CREATE TABLE "Analysis" (
     "highCount" INTEGER NOT NULL,
     "mediumCount" INTEGER NOT NULL,
     "lowCount" INTEGER NOT NULL,
+    "code" TEXT NOT NULL,
     "reportJson" TEXT NOT NULL,
     CONSTRAINT "Analysis_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );

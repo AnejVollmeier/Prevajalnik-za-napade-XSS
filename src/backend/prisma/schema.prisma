@@ -26,6 +26,7 @@ model Analysis {
   highCount   Int
   mediumCount Int
   lowCount    Int
+  code        String   // Store the original code that was analyzed
   reportJson  String   // Shranjujemo kot Stringify JSON
   
   @@index([userId])
