@@ -7,7 +7,12 @@ const router = express.Router();
 
 // Schema for updating analysis name
 const updateAnalysisSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200, "Name is too long"),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(200, "Name is too long")
+    .optional(),
+  folderId: z.number().nullable().optional(),
 });
 
 router.get("/", requireAuth, async (req, res, next) => {
@@ -17,6 +22,7 @@ router.get("/", requireAuth, async (req, res, next) => {
       select: {
         id: true,
         name: true,
+        folderId: true,
         createdAt: true,
         target: true,
         inputMode: true,
@@ -88,10 +94,16 @@ router.patch("/:id", requireAuth, async (req, res, next) => {
     // Update the analysis
     const updated = await prisma.analysis.update({
       where: { id },
-      data: { name: parsed.data.name },
+      data: {
+        ...(parsed.data.name !== undefined && { name: parsed.data.name }),
+        ...(parsed.data.folderId !== undefined && {
+          folderId: parsed.data.folderId,
+        }),
+      },
       select: {
         id: true,
         name: true,
+        folderId: true,
         createdAt: true,
         target: true,
         inputMode: true,

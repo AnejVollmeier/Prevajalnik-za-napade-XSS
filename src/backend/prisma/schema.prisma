@@ -13,12 +13,26 @@ model User {
   passwordHash String
   createdAt    DateTime   @default(now())
   analyses     Analysis[]
+  folders      Folder[]
+}
+
+model Folder {
+  id        Int        @id @default(autoincrement())
+  name      String
+  userId    Int
+  user      User       @relation(fields: [userId], references: [id])
+  analyses  Analysis[]
+  createdAt DateTime   @default(now())
+  
+  @@index([userId])
 }
 
 model Analysis {
   id          Int      @id @default(autoincrement())
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
+  folderId    Int?
+  folder      Folder?  @relation(fields: [folderId], references: [id])
   name        String   @default("Untitled Analysis") // Custom name for the analysis
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt // Track when analysis was last updated

@@ -4,6 +4,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const analyzeRoutes = require("./routes/analyze");
 const analysesRoutes = require("./routes/analyses");
+const foldersRoutes = require("./routes/folders");
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json({ limit: "250kb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/analyze", analyzeRoutes);
 app.use("/api/analyses", analysesRoutes);
+app.use("/api/folders", foldersRoutes);
 
 // Centralni error handler
 app.use((err, req, res, next) => {
