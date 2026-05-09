@@ -33,6 +33,8 @@ export const analysisAPI = {
     api.post('/analyze', { target, inputMode, code }),
   submitProject: (target, projectName, files) =>
     api.post('/analyze/project', { target, projectName, files }),
+  submitGithub: (target, repoUrl) =>
+    api.post('/analyze/github', { target, repoUrl }),
   getList: () => api.get('/analyses'),
   getDetail: (id) => api.get(`/analyses/${id}`),
 };
