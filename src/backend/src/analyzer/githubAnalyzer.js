@@ -21,8 +21,27 @@ function extractRepoInfo(url) {
   };
 }
 
-// Extract JavaScript files recursively
-async function extractJsFiles(dirPath) {
+// Supported file extensions for analysis
+const SUPPORTED_EXTENSIONS = [
+  ".js",    // JavaScript
+  ".ts",    // TypeScript
+  ".tsx",   // TypeScript React
+  ".jsx",   // JavaScript React
+  ".py",    // Python
+  ".cs",    // C#
+  ".java",  // Java
+  ".go",    // Go
+  ".rb",    // Ruby
+  ".php",   // PHP
+  ".cpp",   // C++
+  ".c",     // C
+  ".rs",    // Rust
+  ".swift", // Swift
+  ".kt",    // Kotlin
+];
+
+// Extract source code files recursively
+async function extractSourceFiles(dirPath) {
   const files = {};
   const maxFileSize = 50000; // 50KB per file
   const maxTotalSize = 2000000; // 2MB total
@@ -45,8 +64,13 @@ async function extractJsFiles(dirPath) {
     "coverage",
     "test",
     "tests",
-    ".test.js",
-    ".spec.js",
+    ".test.",
+    ".spec.",
+    "fixtures",
+    "mock",
+    ".min.js",
+    "vendor",
+    ".bundle",
   ];
 
   const shouldExclude = (filePath) => {
@@ -59,7 +83,12 @@ async function extractJsFiles(dirPath) {
     );
   };
 
+  const isSupportedFile = (filename) => {
+    return SUPPORTED_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(ext));
+  };
+
   let totalSize = 0;
+  let fileCount = 0;
 
   function walkDir(dir, relativeDir = "") {
     try {
@@ -77,14 +106,15 @@ async function extractJsFiles(dirPath) {
           walkDir(fullPath, relativePath);
         } else if (
           entry.isFile() &&
-          entry.name.endsWith(".js") &&
+          isSupportedFile(entry.name) &&
           totalSize < maxTotalSize
         ) {
           try {
             const content = fs.readFileSync(fullPath, "utf-8");
-            if (content.length <= maxFileSize) {
+            if (content.length <= maxFileSize && content.trim().length > 0) {
               files[relativePath] = content;
               totalSize += content.length;
+              fileCount++;
             }
           } catch (err) {
             console.warn(`Failed to read file: ${fullPath}`, err.message);
@@ -97,7 +127,7 @@ async function extractJsFiles(dirPath) {
   }
 
   walkDir(dirPath);
-  return files;
+  return { files, fileCount, totalSize };
 }
 
 // Analyze GitHub repository
@@ -121,15 +151,17 @@ async function analyzeGitHubRepo(repoUrl) {
     git = simpleGit();
     await git.clone(repoUrl, tempDir, { "--depth": 1 }); // Only clone latest commit to be faster
 
-    // Extract JS files
-    console.log("Extracting JavaScript files...");
-    const files = await extractJsFiles(tempDir);
+    // Extract source code files (supports multiple languages)
+    console.log("Extracting source code files...");
+    const { files, fileCount, totalSize } = await extractSourceFiles(tempDir);
 
-    if (Object.keys(files).length === 0) {
+    if (fileCount === 0) {
       throw new Error(
-        "No JavaScript files found in the repository (excluding node_modules, dist, etc.)",
+        "No source code files found in the repository. Supported languages: JavaScript, TypeScript, Python, Java, C#, Go, Ruby, PHP, C/C++, Rust, Swift, Kotlin (excluding node_modules, dist, build, etc.)",
       );
     }
+
+    console.log(`Found ${fileCount} source files (${Math.round(totalSize / 1024)}KB total)`);
 
     // Analyze all files and combine results
     let totalScore = 0;
@@ -138,6 +170,7 @@ async function analyzeGitHubRepo(repoUrl) {
     let mediumCount = 0;
     let lowCount = 0;
     const combinedCode = [];
+    let filesWithVulnerabilities = 0;
 
     for (const [filename, code] of Object.entries(files)) {
       const scanResult = scanCode({ code });
@@ -150,6 +183,11 @@ async function analyzeGitHubRepo(repoUrl) {
 
       allFindings = allFindings.concat(findingsWithFile);
       totalScore += scanResult.scoreOverall;
+      
+      if (scanResult.findings.length > 0) {
+        filesWithVulnerabilities++;
+      }
+      
       highCount += scanResult.summary.high;
       mediumCount += scanResult.summary.medium;
       lowCount += scanResult.summary.low;
@@ -157,11 +195,29 @@ async function analyzeGitHubRepo(repoUrl) {
       combinedCode.push(`// File: ${filename}\n${code}`);
     }
 
-    // Calculate average score
-    const scoreOverall = Math.min(
-      100,
-      Math.floor(totalScore / Object.keys(files).length),
-    );
+    // Calculate risk score based on vulnerability count and severity
+    // This properly reflects actual risk instead of penalizing large repos
+    let scoreOverall = 0;
+    
+    if (allFindings.length > 0) {
+      // Base score: each finding contributes to overall risk
+      const criticalCount = allFindings.filter(f => f.severity === "Critical").length;
+      const highCount_findings = allFindings.filter(f => f.severity === "High").length;
+      const mediumCount_findings = allFindings.filter(f => f.severity === "Medium").length;
+      const lowCount_findings = allFindings.filter(f => f.severity === "Low").length;
+      
+      // Score calculation:
+      // Critical: 40 points each (max impact)
+      // High: 25 points each
+      // Medium: 10 points each
+      // Low: 2 points each
+      const riskScore = (criticalCount * 40) + (highCount_findings * 25) + (mediumCount_findings * 10) + (lowCount_findings * 2);
+      
+      // Normalize to 0-100 scale
+      // With aggressive scaling: ~5 critical issues = 100%
+      scoreOverall = Math.min(100, Math.floor((riskScore / 200) * 100));
+    }
+    
     const fullCode = combinedCode.join("\n\n");
 
     const repoInfo = extractRepoInfo(repoUrl);
@@ -169,7 +225,7 @@ async function analyzeGitHubRepo(repoUrl) {
     return {
       success: true,
       projectName: repoInfo.repo,
-      fileCount: Object.keys(files).length,
+      fileCount,
       scoreOverall,
       summary: { high: highCount, medium: mediumCount, low: lowCount },
       findings: allFindings,

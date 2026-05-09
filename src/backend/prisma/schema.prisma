@@ -19,7 +19,9 @@ model Analysis {
   id          Int      @id @default(autoincrement())
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
+  name        String   @default("Untitled Analysis") // Custom name for the analysis
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt // Track when analysis was last updated
   target      String
   inputMode   String
   scoreOverall Int

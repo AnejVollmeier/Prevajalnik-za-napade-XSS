@@ -37,6 +37,10 @@ export const analysisAPI = {
     api.post('/analyze/github', { target, repoUrl }),
   getList: () => api.get('/analyses'),
   getDetail: (id) => api.get(`/analyses/${id}`),
+  updateName: (id, name) =>
+    api.patch(`/analyses/${id}`, { name }),
+  delete: (id) =>
+    api.delete(`/analyses/${id}`),
 };
 
 export default api;

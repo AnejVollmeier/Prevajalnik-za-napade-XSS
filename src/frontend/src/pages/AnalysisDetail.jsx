@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { analysisAPI } from '../api';
+import CodeDropdown from '../components/CodeDropdown';
 
 export default function AnalysisDetail() {
   const { id } = useParams();
@@ -104,7 +105,7 @@ export default function AnalysisDetail() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800">Analysis #{analysis.id}</h1>
+            <h1 className="text-4xl font-bold text-gray-800">{analysis.name || `Analysis #${analysis.id}`}</h1>
             <p className="text-gray-600 mt-2">{formatDate(analysis.createdAt)}</p>
           </div>
           <a
@@ -166,9 +167,7 @@ export default function AnalysisDetail() {
         {/* Analyzed Code */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Analyzed Code</h2>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-            {analysis.code}
-          </pre>
+          <CodeDropdown code={analysis.code} maxLinesShown={20} />
         </div>
 
         {/* Findings */}
@@ -207,9 +206,7 @@ export default function AnalysisDetail() {
                   <div className="mt-4 space-y-3">
                     <div>
                       <p className="font-medium text-sm mb-1">Code Snippet</p>
-                      <pre className="bg-white bg-opacity-50 px-3 py-2 rounded text-xs overflow-x-auto">
-                        {finding.snippet}
-                      </pre>
+                      <CodeDropdown code={finding.snippet} maxLinesShown={20} />
                     </div>
 
                     <div>

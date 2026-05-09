@@ -33,13 +33,19 @@ router.post("/", requireAuth, async (req, res, next) => {
         .json({ error: "Invalid input", details: parsed.error.issues });
     }
 
-    const { target, inputMode, code } = parsed.data;
+     const { target, inputMode, code } = parsed.data;
 
     const scanResult = scanCode({ code });
+
+    // Generate default name
+    const now = new Date();
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    const defaultName = `Pasted Code - ${dateStr}`;
 
      const analysis = await prisma.analysis.create({
        data: {
          userId: req.user.id,
+         name: defaultName,
          target,
          inputMode,
          code, // Save the original code
@@ -108,15 +114,41 @@ router.post("/project", requireAuth, async (req, res, next) => {
       combinedCode.push(`// File: ${filename}\n${code}`);
     }
 
-    // Calculate average score
-    const scoreOverall = Math.min(100, Math.floor(totalScore / Object.keys(files).length));
+    // Calculate risk score based on vulnerability count and severity
+    // This properly reflects actual risk instead of penalizing large projects
+    let scoreOverall = 0;
+    
+    if (allFindings.length > 0) {
+      // Count findings by severity
+      const criticalCount = allFindings.filter(f => f.severity === "Critical").length;
+      const highCount_findings = allFindings.filter(f => f.severity === "High").length;
+      const mediumCount_findings = allFindings.filter(f => f.severity === "Medium").length;
+      const lowCount_findings = allFindings.filter(f => f.severity === "Low").length;
+      
+      // Score calculation:
+      // Critical: 40 points each (max impact)
+      // High: 25 points each
+      // Medium: 10 points each
+      // Low: 2 points each
+      const riskScore = (criticalCount * 40) + (highCount_findings * 25) + (mediumCount_findings * 10) + (lowCount_findings * 2);
+      
+      // Normalize to 0-100 scale
+      // With aggressive scaling: ~5 critical issues = 100%
+      scoreOverall = Math.min(100, Math.floor((riskScore / 200) * 100));
+    }
 
     // Store the combined code as concatenated files
     const fullCode = combinedCode.join('\n\n');
 
+    // Generate default name
+    const now = new Date();
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    const defaultName = `${projectName} - ${dateStr}`;
+
     const analysis = await prisma.analysis.create({
       data: {
         userId: req.user.id,
+        name: defaultName,
         target,
         inputMode: "project",
         code: fullCode,
@@ -166,10 +198,16 @@ router.post("/github", requireAuth, async (req, res, next) => {
     // Analyze GitHub repository
     const gitHubResult = await analyzeGitHubRepo(repoUrl);
 
+    // Generate default name
+    const now = new Date();
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()} ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    const defaultName = `${gitHubResult.projectName} - ${dateStr}`;
+
     // Store in database
     const analysis = await prisma.analysis.create({
       data: {
         userId: req.user.id,
+        name: defaultName,
         target,
         inputMode: "github",
         code: gitHubResult.fullCode,
