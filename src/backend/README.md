@@ -1,42 +1,42 @@
 # XSS Vulnerability Checker - Backend
 
-Backend za statično analizo DOM XSS ranljivosti zgrajen na Node.js, Express in Prisma ORM.
+Backend for static analysis of DOM XSS vulnerabilities built on Node.js, Express, and Prisma ORM.
 
-## Nastavitev okolja
+## Environment Setup
 
-1. Namesti odvisnosti:
+1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Ustvari `.env` datoteko v mapi `src/backend` in nastavi spodnje spremenljivke okolja:
+2. Create an `.env` file in the `src/backend` folder and set the environment variables below:
 
    ```env
-   # Vrata (port), na katerih bo tekel strežnik
+   # Port on which the server will run
    PORT=3000
 
-   # Skrivni ključ za podpisovanje JWT žetonov (uporabi varno geslo)
+   # Secret key for signing JWT tokens (use a secure password)
    JWT_SECRET=super-secret-key-for-jwt-development
 
-   # Pot do lokalne SQLite baze
+   # Path to the local SQLite database
    DATABASE_URL="file:./dev.db"
    ```
 
-3. Inicializiraj podatkovno bazo:
+3. Initialize the database:
 
    ```bash
    npx prisma migrate dev --name init
    ```
 
-4. Zaženi aplikacijo v razvojnem načinu:
+4. Run the application in development mode:
    ```bash
    npm run dev
    ```
 
-## Testiranje API s cURL
+## Testing the API with cURL
 
-### 1. Registracija
+### 1. Registration
 
 ```bash
 curl -X POST http://localhost:3000/api/auth/register \
@@ -44,7 +44,7 @@ curl -X POST http://localhost:3000/api/auth/register \
   -d "{\"email\":\"user@example.com\",\"password\":\"password123\"}"
 ```
 
-### 2. Prijava (shrani prejeti `token`)
+### 2. Login (save the received `token`)
 
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
@@ -56,28 +56,28 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ```bash
 curl -X GET http://localhost:3000/api/auth/me \
-  -H "Authorization: Bearer <TUKAJ_VNESI_TOKEN>"
+  -H "Authorization: Bearer <INSERT_TOKEN_HERE>"
 ```
 
-### 4. Analiza kode
+### 4. Code Analysis
 
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <TUKAJ_VNESI_TOKEN>" \
+  -H "Authorization: Bearer <INSERT_TOKEN_HERE>" \
   -d "{\"target\":\"dom-js\",\"inputMode\":\"paste\",\"code\":\"document.body.innerHTML = location.search;\"}"
 ```
 
-### 5. Seznam analiz (Zgodovina)
+### 5. List of Analyses (History)
 
 ```bash
 curl -X GET http://localhost:3000/api/analyses \
-  -H "Authorization: Bearer <TUKAJ_VNESI_TOKEN>"
+  -H "Authorization: Bearer <INSERT_TOKEN_HERE>"
 ```
 
-### 6. Detajl analize
+### 6. Analysis Detail
 
 ```bash
 curl -X GET http://localhost:3000/api/analyses/1 \
-  -H "Authorization: Bearer <TUKAJ_VNESI_TOKEN>"
+  -H "Authorization: Bearer <INSERT_TOKEN_HERE>"
 ```
