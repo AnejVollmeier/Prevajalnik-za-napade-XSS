@@ -261,7 +261,7 @@ const domXssRules = [
             /\.json\(\)/i,
             /response\.\w+/i,
             /axios\./i,
-            /fetch\(/i,
+            /\bfetch\s*\(/i,  // FIX: \b word boundary prepreči ujemanje z getElementById(
         ],
         severity: "High",
         message: "Stored XSS: API response data inserted into DOM without sanitization.",
@@ -275,6 +275,7 @@ const domXssRules = [
             /db\.all|db\.get|db\.query/i,
             /\.find\(|\.exec\(/i,
             /SELECT.*FROM/i,
+            /rows|results|posts|comments|data/i,  // spremenljivke iz DB callbackov
         ],
         severity: "High",
         message: "Stored XSS: Database content returned directly to client without sanitization.",

@@ -42,15 +42,27 @@ function isSanitized(line) {
 
 function collectTaintedVars(lines) {
     const tainted = new Set();
-    lines.forEach((line) => {
-        const isTaintSource = TAINT_SOURCES.some((src) => src.test(line));
-        if (!isTaintSource) return;
-        if (isSanitized(line)) return;
-        const match =
-            line.match(/(?:const|let|var)\s+(\w+)\s*=/) ||
-            line.match(/^\s*(\w+)\s*=/);
-        if (match) tainted.add(match[1]);
-    });
+
+    // Večkrat iteriramo da ujamemo verigo: a = source, b = a, c = b
+    for (let pass = 0; pass < 3; pass++) {
+        lines.forEach((line) => {
+            if (isSanitized(line)) return;
+
+            const isDirectSource = TAINT_SOURCES.some((src) => src.test(line));
+            const containsTainted = lineContainsTainted(line, tainted);
+
+            // Template literal z tainted spremenljivko: const html = `...${comment}...`
+            const isTemplateLiteral = /`[^`]*\$\{/.test(line) && containsTainted;
+
+            if (!isDirectSource && !containsTainted && !isTemplateLiteral) return;
+
+            const match =
+                line.match(/(?:const|let|var)\s+(\w+)\s*=/) ||
+                line.match(/^\s*(\w+)\s*=/);
+            if (match) tainted.add(match[1]);
+        });
+    }
+
     return tainted;
 }
 
